@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 基础滚动条美化 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.4);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Markdown 渲染基础样式 */
+.memo-content {
+  line-height: 1.7;
+  word-break: break-word;
+}
+.memo-content p {
+  margin: 0.5em 0;
+}
+.memo-content h1,
+.memo-content h2,
+.memo-content h3 {
+  font-weight: 700;
+  margin: 0.8em 0 0.4em;
+}
+.memo-content ul,
+.memo-content ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+.memo-content ul {
+  list-style: disc;
+}
+.memo-content ol {
+  list-style: decimal;
+}
+.memo-content code {
+  background: rgba(128, 128, 128, 0.15);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.memo-content pre {
+  background: rgba(128, 128, 128, 0.12);
+  padding: 0.8em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.6em 0;
+}
+.memo-content pre code {
+  background: transparent;
+  padding: 0;
+}
+.memo-content blockquote {
+  border-left: 3px solid rgba(128, 128, 128, 0.4);
+  padding-left: 1em;
+  margin: 0.6em 0;
+  color: rgba(128, 128, 128, 0.9);
+}
+.memo-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
