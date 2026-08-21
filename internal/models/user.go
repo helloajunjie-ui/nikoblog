@@ -60,7 +60,10 @@ type User struct {
 	SecurityQuestions SecurityQAList `gorm:"type:text" json:"security_questions"`
 	SecurityFailCount int            `gorm:"default:0" json:"security_fail_count"`
 	SecurityLockUntil *time.Time     `json:"security_lock_until"`
-	Role              string         `gorm:"size:16;default:user;not null" json:"role"`
-	CreatedAt         time.Time      `json:"created_at"`
-	UpdatedAt         time.Time      `json:"updated_at"`
+	// 登录/改密失败锁定（防暴力破解）：失败计数与锁定截止时间
+	LoginFailCount int        `gorm:"default:0" json:"login_fail_count"`
+	LoginLockUntil *time.Time `json:"login_lock_until"`
+	Role           string     `gorm:"size:16;default:user;not null" json:"role"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }

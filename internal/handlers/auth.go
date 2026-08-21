@@ -22,6 +22,12 @@ const (
 	securityLockDur = 24 * time.Hour // 锁定 24 小时
 )
 
+// 登录/改密失败锁定阈值与时长（防暴力破解）
+const (
+	loginMaxFail = 5                // 连续失败 5 次
+	loginLockDur = 15 * time.Minute // 锁定 15 分钟
+)
+
 // AuthHandler 认证相关处理器
 type AuthHandler struct {
 	DB     *gorm.DB
@@ -44,6 +50,11 @@ type RegisterRequest struct {
 
 // Register 用户注册
 func (h *AuthHandler) Register(c *gin.Context) {
+	// 注册 IP 限流（每 IP 每小时最多 5 次）
+	if !checkRegisterRateLimit(c) {
+		return
+	}
+
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误: " + err.Error()})
@@ -168,10 +179,37 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// 检查登录锁定
+	if user.LoginLockUntil != nil && time.Now().Before(*user.LoginLockUntil) {
+		remain := time.Until(*user.LoginLockUntil).Round(time.Minute)
+		c.JSON(http.StatusForbidden, gin.H{"error": "登录失败次数过多，账号已锁定，请 " + remain.String() + " 后再试"})
+		return
+	}
+
 	// 校验密码
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+		// 失败计数 +1，达到阈值则锁定
+		newCount := user.LoginFailCount + 1
+		if newCount >= loginMaxFail {
+			lockUntil := time.Now().Add(loginLockDur)
+			h.DB.Model(&user).Updates(map[string]interface{}{
+				"login_fail_count": newCount,
+				"login_lock_until": &lockUntil,
+			})
+			c.JSON(http.StatusForbidden, gin.H{"error": "登录失败次数过多，账号已锁定 15 分钟"})
+			return
+		}
+		h.DB.Model(&user).Update("login_fail_count", newCount)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误，还可尝试 " + strconv.Itoa(loginMaxFail-newCount) + " 次"})
 		return
+	}
+
+	// 登录成功：清零失败计数与锁定
+	if user.LoginFailCount > 0 || user.LoginLockUntil != nil {
+		h.DB.Model(&user).Updates(map[string]interface{}{
+			"login_fail_count": 0,
+			"login_lock_until": nil,
+		})
 	}
 
 	// 生成 JWT
@@ -412,9 +450,28 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
+	// 检查改密锁定（与登录共用失败计数/锁定字段）
+	if user.LoginLockUntil != nil && time.Now().Before(*user.LoginLockUntil) {
+		remain := time.Until(*user.LoginLockUntil).Round(time.Minute)
+		c.JSON(http.StatusForbidden, gin.H{"error": "操作失败次数过多，账号已锁定，请 " + remain.String() + " 后再试"})
+		return
+	}
+
 	// 校验原密码
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "原密码不正确"})
+		// 失败计数 +1，达到阈值则锁定
+		newCount := user.LoginFailCount + 1
+		if newCount >= loginMaxFail {
+			lockUntil := time.Now().Add(loginLockDur)
+			h.DB.Model(&user).Updates(map[string]interface{}{
+				"login_fail_count": newCount,
+				"login_lock_until": &lockUntil,
+			})
+			c.JSON(http.StatusForbidden, gin.H{"error": "操作失败次数过多，账号已锁定 15 分钟"})
+			return
+		}
+		h.DB.Model(&user).Update("login_fail_count", newCount)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "原密码不正确，还可尝试 " + strconv.Itoa(loginMaxFail-newCount) + " 次"})
 		return
 	}
 
