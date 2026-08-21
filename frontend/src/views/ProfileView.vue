@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import SecuritySettingsModal from '../components/SecuritySettingsModal.vue'
+import ChangePasswordModal from '../components/ChangePasswordModal.vue'
 import { fetchMyCommentedMemos, uploadAvatar } from '../api'
 
 const props = defineProps({
@@ -13,6 +14,7 @@ const emit = defineEmits(['avatar-updated'])
 
 const router = useRouter()
 const showSecurity = ref(false)
+const showPassword = ref(false)
 
 // 头像上传
 const avatarUploading = ref(false)
@@ -147,10 +149,16 @@ function goHome() {
         <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
           <h3 class="font-semibold mb-2">账号安全</h3>
           <p class="text-xs text-gray-500 mb-3">设置密保问题，用于忘记密码时找回账号</p>
-          <button
-            @click="showSecurity = true"
-            class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm"
-          >修改密保问题</button>
+          <div class="flex flex-wrap gap-2">
+            <button
+              @click="showSecurity = true"
+              class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm"
+            >修改密保问题</button>
+            <button
+              @click="showPassword = true"
+              class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+            >修改密码</button>
+          </div>
         </div>
 
         <!-- 我回复过的主题 -->
@@ -194,6 +202,12 @@ function goHome() {
     <SecuritySettingsModal
       v-if="showSecurity"
       @close="showSecurity = false"
+    />
+
+    <!-- 修改密码弹窗 -->
+    <ChangePasswordModal
+      v-if="showPassword"
+      @close="showPassword = false"
     />
   </main>
 </template>

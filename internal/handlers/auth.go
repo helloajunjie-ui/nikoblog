@@ -380,6 +380,60 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	})
 }
 
+// ChangePasswordRequest 主动修改密码请求体
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6,max=72"`
+}
+
+// ChangePassword 已登录用户主动修改密码。
+// 校验原密码，正确则直接更新为新密码；忘记密码请走 ForgotPassword 找回流程。
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误: " + err.Error()})
+		return
+	}
+
+	// 从 JWT 中间件写入的 context 获取当前用户 ID
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "未登录"})
+		return
+	}
+
+	var user models.User
+	if err := h.DB.First(&user, userID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "用户不存在"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库错误"})
+		return
+	}
+
+	// 校验原密码
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "原密码不正确"})
+		return
+	}
+
+	// 生成新密码哈希并更新
+	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+		return
+	}
+	if err := h.DB.Model(&user).Update("password_hash", string(newHash)).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码修改失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "密码修改成功",
+	})
+}
+
 // verifySecurityAnswer 校验密保答案。
 // 答对：清零失败计数并返回 true。
 // 答错：失败计数 +1，达到阈值则锁定 24 小时，返回 false（已写入响应）。

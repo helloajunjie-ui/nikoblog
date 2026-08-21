@@ -107,6 +107,9 @@ func main() {
 
 		// 更新密保问答（需登录）
 		protected.PUT("/auth/security", authHandler.UpdateSecurity)
+
+		// 主动修改密码（需登录，校验原密码）
+		protected.PUT("/auth/password", authHandler.ChangePassword)
 	}
 
 	// 后台管理路由（需要 JWT + admin 角色）

@@ -9,6 +9,7 @@ export const getSecurityQuestion = (data) => http.post('/api/auth/security/quest
 export const forgotUsername = (data) => http.post('/api/auth/forgot/username', data)
 export const forgotPassword = (data) => http.post('/api/auth/forgot/password', data)
 export const updateSecurity = (data) => http.put('/api/auth/security', data)
+export const changePassword = (data) => http.put('/api/auth/password', data)
 
 // ===== 博文 =====
 export const fetchMemos = (params) => http.get('/api/memos', { params })
