@@ -344,8 +344,8 @@ go build -o nikoblog ./cmd/server
 
 多阶段构建：
 1. `node:20-alpine`：安装前端依赖并 `npm run build`，产物输出到 `web/dist`。
-2. `golang:1.26-alpine`：`CGO_ENABLED=0 go build`，embed 打包前端。
-3. `alpine:3.20`：运行镜像，安装 ca-certificates 与 tzdata，`NIKOBLOG_DATA_DIR=/app/data`，暴露 8080，挂载卷 `/app/data`。
+2. `golang:1.26-alpine`：安装 `gcc` + `musl-dev`，`CGO_ENABLED=1 go build`（**必须启用 CGO**，因 SQLite 驱动 `mattn/go-sqlite3` 是 CGO 依赖，`CGO_ENABLED=0` 会编译失败），embed 打包前端。
+3. `alpine:3.20`：运行镜像，安装 ca-certificates、tzdata 与 `libc6-compat`，`NIKOBLOG_DATA_DIR=/app/data`，暴露 8080，挂载卷 `/app/data`。
 
 ### 12.4 docker-compose.yml
 
